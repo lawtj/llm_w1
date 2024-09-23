@@ -19,8 +19,5 @@ Your goal is to assist users in understanding the current state of medical evide
 '''
 
 #load context from data directory
-scraped_markdown = ''
-documents = SimpleDirectoryReader("data").load_data()
-for i, doc in enumerate(documents):
-  scraped_markdown += doc.text
+DATA = SimpleDirectoryReader("data").load_data()
 

@@ -1,4 +1,5 @@
 .chainlit/
+data_index_llama/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
