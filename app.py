@@ -8,31 +8,33 @@ import openai
 from langsmith.wrappers import wrap_openai
 from langsmith import traceable
 
-
 from prompts import SYSTEM_PROMPT, scraped_markdown
 
 api_key_openai = os.getenv("OPENAI_API_KEY")
 
 #initialize the client
-client = wrap_openai(openai.AsyncClient(api_key=api_key_openai, 
-                            base_url="https://api.openai.com/v1", 
+client = wrap_openai(openai.AsyncClient(api_key=api_key_openai,
+                            base_url="https://api.openai.com/v1",
                             ))
 
 #use this part in the client.chat.completions.create() method
+open_ai_model = "chatgpt-4o-latest"
 model_kwargs = {
-    "model": "chatgpt-4o-latest",
+    "model": open_ai_model,
     "temperature": 0.3,
     "max_tokens": 1500
 }
+
 @traceable
 @cl.on_message
 async def on_message(message):
-
-    #get the history. check if message history is blank, and if it is, insert the system prompt
+    # Maintain an array of messages in the user session
     message_history = cl.user_session.get('messages', [])
-    if not message_history:
+
+    # Check if message history is blank, and if it is, insert the system prompt
+    if not message_history or message_history[0].get("role") != "system":
         message_history.insert(0, {"role": "system", "content": SYSTEM_PROMPT + scraped_markdown})
-    
+
     # now append the user message to the message history
     message_history.append({"role": "user", "content": message.content})
 
@@ -45,10 +47,10 @@ async def on_message(message):
     async for completion in stream:
         if token := completion.choices[0].delta.content or "":
             await response_message.stream_token(token)
-    
+
     #now append the assistant response to the message history
     message_history.append({"role": "assistant", "content": response_message.content})
-    
+
     #save history to user session
     cl.user_session.set('messages', message_history)
 
