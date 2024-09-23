@@ -61,6 +61,7 @@ async def start_main():
 def retrieve_relevant_docs(query, retriever, k=10):
     if USE_LLAMA_EMBEDDING:
         relevant_docs = retriever.retrieve(query)
+        print(relevant_docs)
         context = ""
         for i, doc in enumerate(relevant_docs):
             context += doc.node.get_content()
@@ -68,6 +69,7 @@ def retrieve_relevant_docs(query, retriever, k=10):
     else:
         # Vectorstore returns the most similar documents based on the query
         relevant_docs = retriever.similarity_search(query, k=k)
+        print(relevant_docs)
         # Concatenate the content of the retrieved documents
         context = "\n\n".join([doc.page_content for doc in relevant_docs])
         return context
