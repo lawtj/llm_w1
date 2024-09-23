@@ -24,7 +24,7 @@ for url in urls_to_scrape:
 
 
 #save the scraped markdown to a file
-with open('scraped_markdown.md', 'w') as f:
+with open('data/scraped_markdown.md', 'w') as f:
     for doc in docs:
         f.write(doc)
         f.write('\n')
