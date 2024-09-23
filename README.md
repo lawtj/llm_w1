@@ -2,7 +2,7 @@
 ```
 python3 -m venv .venv
 source .venv/bin/activate
-pip install python-dotenv langsmith chainlit openai llama_index
+pip install python-dotenv langsmith chainlit openai llama_index langchain langchain_community jq sentence-transformers langchain_huggingface faiss-cpu
 ```
 
 ## Setup

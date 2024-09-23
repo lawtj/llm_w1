@@ -1,4 +1,5 @@
 from llama_index.core import SimpleDirectoryReader
+from langchain_community.document_loaders import JSONLoader
 
 SYSTEM_PROMPT = '''
 You are an expert medical evidence evaluator with a background in synthesizing research from peer-reviewed medical articles. Your task is to critically evaluate summaries of medical studies, synthesize the key findings, and provide accurate, evidence-based answers to the user’s queries based on these summaries. You are provided with a data set of articles about temperature management. You may only refer to the information provided in the summaries to answer the user's questions, specifically about temperature management. Do not answer questions about any other topic.
@@ -19,5 +20,10 @@ Your goal is to assist users in understanding the current state of medical evide
 '''
 
 #load context from data directory
-DATA = SimpleDirectoryReader("data").load_data()
+LLAMA_DATA = SimpleDirectoryReader("data").load_data()
 
+loader = JSONLoader(
+    file_path='data/firecrawl_output.json',
+    jq_schema='.data[].markdown',
+    text_content=False)
+LANGCHAIN_DATA = loader.load()

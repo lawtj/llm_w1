@@ -9,8 +9,11 @@ from langsmith.wrappers import wrap_openai
 from langsmith import traceable
 
 from llama_index.core import VectorStoreIndex, StorageContext, load_index_from_storage
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.text_splitter import MarkdownTextSplitter
 
-from prompts import SYSTEM_PROMPT, DATA
+from prompts import SYSTEM_PROMPT, LLAMA_DATA, LANGCHAIN_DATA
 
 api_key_openai = os.getenv("OPENAI_API_KEY")
 
@@ -27,25 +30,47 @@ model_kwargs = {
     "max_tokens": 1500
 }
 
+# If false, it'll use langchain indexing
+USE_LLAMA_EMBEDDING = False
+
 # vars for rag indexing
 retriever = None
 llama_index_location = './data_index_llama/'
 
 @cl.on_chat_start
 async def start_main():
-
-    # Load dataset from local file if it exists, otherwise creates a new index
-    if os.path.exists(llama_index_location):
-        storage_context = StorageContext.from_defaults(persist_dir=llama_index_location)
-        # load index
-        index = load_index_from_storage(storage_context)
+    if USE_LLAMA_EMBEDDING:
+        # Load dataset from local file if it exists, otherwise creates a new index
+        if os.path.exists(llama_index_location):
+            storage_context = StorageContext.from_defaults(persist_dir=llama_index_location)
+            # load index
+            index = load_index_from_storage(storage_context)
+        else:
+            # Generate dataset if local file doesn't exist
+            # Load documents from a directory (you can change this path as needed)
+            index = VectorStoreIndex.from_documents(LLAMA_DATA)
+            index.storage_context.persist(persist_dir=llama_index_location)
+        global retriever
+        retriever = index.as_retriever(retrieval_mode='similarity', k=3)
     else:
-        # Generate dataset if local file doesn't exist
-        # Load documents from a directory (you can change this path as needed)
-        index = VectorStoreIndex.from_documents(DATA)
-        index.storage_context.persist(persist_dir=llama_index_location)
-    global retriever
-    retriever = index.as_retriever(retrieval_mode='similarity', k=3)
+        text_splitter = MarkdownTextSplitter(chunk_size=10000, chunk_overlap=2000)
+        splits = text_splitter.split_documents(LANGCHAIN_DATA)
+        embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        retriever = FAISS.from_documents(documents=splits, embedding=embedding_model)
+
+def retrieve_relevant_docs(query, retriever, k=10):
+    if USE_LLAMA_EMBEDDING:
+        relevant_docs = retriever.retrieve(query)
+        context = ""
+        for i, doc in enumerate(relevant_docs):
+            context += doc.node.get_content()
+        return context
+    else:
+        # Vectorstore returns the most similar documents based on the query
+        relevant_docs = retriever.similarity_search(query, k=k)
+        # Concatenate the content of the retrieved documents
+        context = "\n\n".join([doc.page_content for doc in relevant_docs])
+        return context
 
 @traceable
 @cl.on_message
@@ -58,15 +83,13 @@ async def on_message(message):
         message_history.insert(0, {"role": "system", "content": SYSTEM_PROMPT})
 
     # get relevant docs from rag/index
-    relevant_docs = retriever.retrieve(message.content)
-    doc_content = ""
-    for i, doc in enumerate(relevant_docs):
-        doc_content += doc.node.get_content()
-    if len(doc_content) > 0:
+    doc_context = retrieve_relevant_docs(message.content, retriever)
+
+    if len(doc_context) > 0:
         # if previous content is present, remove it. This is because we only want to keep relevant documents in the prompt.
         if len(message_history) > 2 and message_history[1].get("role") == "system":
             message_history.pop(1)
-        message_history.insert(1, {"role": "system", "content": doc_content})
+        message_history.insert(1, {"role": "system", "content": doc_context})
 
     # now append the user message to the message history
     message_history.append({"role": "user", "content": message.content})
