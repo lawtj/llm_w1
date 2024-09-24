@@ -13,7 +13,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import MarkdownTextSplitter
 
-from prompts import SYSTEM_PROMPT, LLAMA_DATA, LANGCHAIN_DATA
+from prompts import SYSTEM_PROMPT, LLAMA_DATA, LANGCHAIN_DATA, SCRAPED_MARKDOWN
 
 api_key_openai = os.getenv("OPENAI_API_KEY")
 
@@ -32,6 +32,12 @@ model_kwargs = {
 
 # If false, it'll use langchain indexing
 USE_LLAMA_EMBEDDING = False
+
+# If true, it'll generate golden answers
+GENERATE_GOLDEN_ANSWERS = False
+
+# If true, turn off context history 
+TURN_OFF_HISTORY = False
 
 # vars for rag indexing
 retriever = None
@@ -84,8 +90,12 @@ async def on_message(message):
     if not message_history or message_history[0].get("role") != "system":
         message_history.insert(0, {"role": "system", "content": SYSTEM_PROMPT})
 
-    # get relevant docs from rag/index
-    doc_context = retrieve_relevant_docs(message.content, retriever)
+    if (GENERATE_GOLDEN_ANSWERS):
+        # add reduced paper data fed directly into system prompt for comparison
+        doc_context = SCRAPED_MARKDOWN
+    else:
+        # get relevant docs from rag/index
+        doc_context = retrieve_relevant_docs(message.content, retriever)
 
     if len(doc_context) > 0:
         # if previous content is present, remove it. This is because we only want to keep relevant documents in the prompt.
@@ -110,7 +120,8 @@ async def on_message(message):
     message_history.append({"role": "assistant", "content": response_message.content})
 
     #save history to user session
-    cl.user_session.set('messages', message_history)
+    if not TURN_OFF_HISTORY:
+        cl.user_session.set('messages', message_history)
 
     await response_message.update()
 
