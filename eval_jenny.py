@@ -160,7 +160,8 @@ def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
 # The name or UUID of the LangSmith dataset to evaluate on.
 # data = "TTM golden ref"
 # data = "TTM RAG with reduced data"
-data = "TTM RAG with full data"
+# data = "TTM RAG with full data"
+data = "TTM llama"
 
 # A string to prefix the experiment name with.
 experiment_prefix = "Evidence summarizer for TTM articles"

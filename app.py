@@ -31,7 +31,7 @@ model_kwargs = {
 }
 
 # If false, it'll use langchain indexing
-USE_LLAMA_EMBEDDING = False
+USE_LLAMA_EMBEDDING = True
 
 # If true, it'll generate golden answers
 GENERATE_GOLDEN_ANSWERS = False
