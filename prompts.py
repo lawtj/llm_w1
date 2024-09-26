@@ -1,5 +1,6 @@
 from llama_index.core import SimpleDirectoryReader
 from langchain_community.document_loaders import JSONLoader
+from langchain.document_loaders import TextLoader
 
 SYSTEM_PROMPT = '''
 You are an expert medical evidence evaluator with a background in synthesizing research from peer-reviewed medical articles. Your task is to critically evaluate summaries of medical studies, synthesize the key findings, and provide accurate, evidence-based answers to the user’s queries based on these summaries. You are provided with a data set of articles about temperature management. You may only refer to the information provided in the summaries to answer the user's questions, specifically about temperature management. Do not answer questions about any other topic.
@@ -19,11 +20,26 @@ When engaging with the user, adhere to the following guidelines:
 Your goal is to assist users in understanding the current state of medical evidence as reflected in article summaries, helping them digest, compare and contrast similarities and differences current evidence trends.
 '''
 
-#load context from data directory
-LLAMA_DATA = SimpleDirectoryReader("data").load_data()
+# If true, use smaller ttm_data set (5 custom papers). Otherwise use full scraped data
+GOLDEN_SOURCE = False
+if (GOLDEN_SOURCE):
+	data_folder = "ttm_data"
+else:
+	data_folder = "data"
 
-loader = JSONLoader(
-    file_path='data/firecrawl_output.json',
-    jq_schema='.data[].markdown',
-    text_content=False)
+# For llama embedding: load context
+LLAMA_DATA = SimpleDirectoryReader(data_folder).load_data()
+
+# For langchain indexing: load context
+if (GOLDEN_SOURCE):
+	loader = TextLoader(file_path=data_folder+'/scraped_markdown.md')
+else:
+	loader = JSONLoader(
+		file_path=data_folder+'/firecrawl_output.json',
+		jq_schema='.data[].markdown',
+		text_content=False)
 LANGCHAIN_DATA = loader.load()
+
+# Full TTM papers for feeding into system prompt for golden reference q&a:
+with open('ttm_data/scraped_markdown.md', 'r') as f:
+	SCRAPED_MARKDOWN = f.read()
