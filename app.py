@@ -34,7 +34,7 @@ model_kwargs = {
 USE_LLAMA_EMBEDDING = True
 
 # If true, it'll generate golden answers
-GENERATE_GOLDEN_ANSWERS = False
+GENERATE_GOLDEN_ANSWERS = True
 
 # If true, turn off context history 
 TURN_OFF_HISTORY = False
@@ -43,6 +43,7 @@ TURN_OFF_HISTORY = False
 retriever = None
 llama_index_location = './data_index_llama/'
 
+@traceable
 @cl.on_chat_start
 async def start_main():
     if USE_LLAMA_EMBEDDING:
