@@ -1,7 +1,7 @@
 import tiktoken
 
 # open markdown file
-with open('scraped_markdown.md', 'r') as f:
+with open("scraped_markdown.md", "r") as f:
     scraped_markdown = f.read()
 
 

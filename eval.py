@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from langchain_openai import ChatOpenAI
@@ -11,31 +12,37 @@ import json
 
 from langsmith.wrappers import wrap_openai
 from langsmith import traceable
+
 client = wrap_openai(OpenAI())
+
 
 @traceable
 def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
-    inputs = example.inputs['messages']
+    inputs = example.inputs["messages"]
     outputs = example.outputs
     # print(outputs['generations'][0]['text'])
 
     # Extract system prompt
-    system_prompt = next((msg['data']['content'] for msg in inputs if msg['type'] == 'system'), "")
+    system_prompt = next(
+        (msg["data"]["content"] for msg in inputs if msg["type"] == "system"), ""
+    )
 
     # Extract message history
     message_history = []
     for msg in inputs:
-        if msg['type'] in ['human', 'ai']:
-            message_history.append({
-                "role": "user" if msg['type'] == 'human' else "assistant",
-                "content": msg['data']['content']
-            })
+        if msg["type"] in ["human", "ai"]:
+            message_history.append(
+                {
+                    "role": "user" if msg["type"] == "human" else "assistant",
+                    "content": msg["data"]["content"],
+                }
+            )
 
     # Extract latest user message and model output
-    latest_message = message_history[-1]['content'] if message_history else ""
-    model_output = outputs['generations'][0]['text']
+    latest_message = message_history[-1]["content"] if message_history else ""
+    model_output = outputs["generations"][0]["text"]
 
-    judge_prompt_1 = '''
+    judge_prompt_1 = """
     Based on the above information, evaluate the model's output for compliance with the system prompt and context of the conversation. 
     Provide a score from 0 to 10, where 0 is completely non-compliant and 10 is perfectly compliant.
     Also provide a brief explanation for your score.
@@ -45,9 +52,9 @@ def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
         "score": <int>,
         "explanation": "<string>"
     }}
-    '''
+    """
 
-    judge_prompt_2 = '''
+    judge_prompt_2 = """
 
     Based on the above information, your task is to provide a total rating score based on how well the model output complies with the system prompt and context of the conversation..
     Give your answer on a scale of 0 to 10, where 0 is completely non-compliant and 10 is perfectly compliant.
@@ -67,7 +74,7 @@ def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
         "explanation": "<string>"
     }}
 
-    '''
+    """
 
     evaluation_prompt = f"""
     System Prompt: {system_prompt}
@@ -87,10 +94,13 @@ def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "You are an AI assistant tasked with evaluating the compliance of model outputs to given prompts and conversation context."},
-            {"role": "user", "content": evaluation_prompt}
+            {
+                "role": "system",
+                "content": "You are an AI assistant tasked with evaluating the compliance of model outputs to given prompts and conversation context.",
+            },
+            {"role": "user", "content": evaluation_prompt},
         ],
-        temperature=0.2
+        temperature=0.2,
     )
 
     try:
@@ -98,14 +108,15 @@ def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
         return {
             "key": "prompt_compliance",
             "score": result["score"] / 10,  # Normalize to 0-1 range
-            "reason": result["explanation"]
+            "reason": result["explanation"],
         }
     except json.JSONDecodeError:
         return {
             "key": "prompt_compliance",
             "score": 0,
-            "reason": "Failed to parse evaluator response"
+            "reason": "Failed to parse evaluator response",
         }
+
 
 # The name or UUID of the LangSmith dataset to evaluate on.
 data = "TTM"
@@ -114,9 +125,7 @@ data = "TTM"
 experiment_prefix = "Evidence summarizer for TTM articles"
 
 # List of evaluators to score the outputs of target task
-evaluators = [
-    prompt_compliance_evaluator
-]
+evaluators = [prompt_compliance_evaluator]
 
 # Evaluate the target task
 results = evaluate(

@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 import chainlit as cl
@@ -17,18 +18,17 @@ from prompts import SYSTEM_PROMPT, LLAMA_DATA, LANGCHAIN_DATA, SCRAPED_MARKDOWN
 
 api_key_openai = os.getenv("OPENAI_API_KEY")
 
-#initialize the client
-client = wrap_openai(openai.AsyncClient(api_key=api_key_openai,
-                            base_url="https://api.openai.com/v1",
-                            ))
+# initialize the client
+client = wrap_openai(
+    openai.AsyncClient(
+        api_key=api_key_openai,
+        base_url="https://api.openai.com/v1",
+    )
+)
 
-#use this part in the client.chat.completions.create() method
+# use this part in the client.chat.completions.create() method
 open_ai_model = "chatgpt-4o-latest"
-model_kwargs = {
-    "model": open_ai_model,
-    "temperature": 0.3,
-    "max_tokens": 1500
-}
+model_kwargs = {"model": open_ai_model, "temperature": 0.3, "max_tokens": 1500}
 
 # If false, it'll use langchain indexing
 USE_LLAMA_EMBEDDING = True
@@ -36,12 +36,13 @@ USE_LLAMA_EMBEDDING = True
 # If true, it'll generate golden answers
 GENERATE_GOLDEN_ANSWERS = True
 
-# If true, turn off context history 
+# If true, turn off context history
 TURN_OFF_HISTORY = False
 
 # vars for rag indexing
 retriever = None
-llama_index_location = './data_index_llama/'
+llama_index_location = "./data_index_llama/"
+
 
 @traceable
 @cl.on_chat_start
@@ -49,7 +50,9 @@ async def start_main():
     if USE_LLAMA_EMBEDDING:
         # Load dataset from local file if it exists, otherwise creates a new index
         if os.path.exists(llama_index_location):
-            storage_context = StorageContext.from_defaults(persist_dir=llama_index_location)
+            storage_context = StorageContext.from_defaults(
+                persist_dir=llama_index_location
+            )
             # load index
             index = load_index_from_storage(storage_context)
         else:
@@ -58,12 +61,15 @@ async def start_main():
             index = VectorStoreIndex.from_documents(LLAMA_DATA)
             index.storage_context.persist(persist_dir=llama_index_location)
         global retriever
-        retriever = index.as_retriever(retrieval_mode='similarity', k=3)
+        retriever = index.as_retriever(retrieval_mode="similarity", k=3)
     else:
         text_splitter = MarkdownTextSplitter(chunk_size=10000, chunk_overlap=2000)
         splits = text_splitter.split_documents(LANGCHAIN_DATA)
-        embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        embedding_model = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
+        )
         retriever = FAISS.from_documents(documents=splits, embedding=embedding_model)
+
 
 def retrieve_relevant_docs(query, retriever, k=10):
     if USE_LLAMA_EMBEDDING:
@@ -81,17 +87,18 @@ def retrieve_relevant_docs(query, retriever, k=10):
         context = "\n\n".join([doc.page_content for doc in relevant_docs])
         return context
 
+
 @traceable
 @cl.on_message
 async def on_message(message):
     # Maintain an array of messages in the user session
-    message_history = cl.user_session.get('messages', [])
+    message_history = cl.user_session.get("messages", [])
 
     # Check if message history is blank, and if it is, insert the system prompt
     if not message_history or message_history[0].get("role") != "system":
         message_history.insert(0, {"role": "system", "content": SYSTEM_PROMPT})
 
-    if (GENERATE_GOLDEN_ANSWERS):
+    if GENERATE_GOLDEN_ANSWERS:
         # add reduced paper data fed directly into system prompt for comparison
         doc_context = SCRAPED_MARKDOWN
     else:
@@ -107,22 +114,23 @@ async def on_message(message):
     # now append the user message to the message history
     message_history.append({"role": "user", "content": message.content})
 
-    #initialize response message
+    # initialize response message
     response_message = cl.Message(content="")
     await response_message.send()
 
-    #generate the response
-    stream = await client.chat.completions.create(messages=message_history, stream=True, **model_kwargs)
+    # generate the response
+    stream = await client.chat.completions.create(
+        messages=message_history, stream=True, **model_kwargs
+    )
     async for completion in stream:
         if token := completion.choices[0].delta.content or "":
             await response_message.stream_token(token)
 
-    #now append the assistant response to the message history
+    # now append the assistant response to the message history
     message_history.append({"role": "assistant", "content": response_message.content})
 
-    #save history to user session
+    # save history to user session
     if not TURN_OFF_HISTORY:
-        cl.user_session.set('messages', message_history)
+        cl.user_session.set("messages", message_history)
 
     await response_message.update()
-
