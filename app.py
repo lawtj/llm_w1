@@ -10,13 +10,12 @@ import openai
 from langsmith.wrappers import wrap_openai
 from langsmith import traceable
 
-from llama_index.core import VectorStoreIndex, StorageContext, load_index_from_storage
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import MarkdownTextSplitter
 
 from prompts import SYSTEM_PROMPT
-from data_sources import LLAMA_DATA, LANGCHAIN_DATA, SCRAPED_MARKDOWN
+from data_sources import LANGCHAIN_DATA, SCRAPED_MARKDOWN
 from functions import get_citation_count
 
 # initialize the client
@@ -32,9 +31,6 @@ open_ai_model = "gpt-4o-mini"
 model_kwargs = {"model": open_ai_model, "temperature": 0.3, "max_tokens": 1500}
 
 ### RAG PARAMETERS ###
-# If false, it'll use langchain indexing
-USE_LLAMA_EMBEDDING = False
-
 # If true, it'll generate golden answers
 GENERATE_GOLDEN_ANSWERS = False
 
@@ -49,46 +45,25 @@ llama_index_location = "./data_index_llama/"
 @traceable
 @cl.on_chat_start
 async def start_main():
-    if USE_LLAMA_EMBEDDING:
-        # Load dataset from local file if it exists, otherwise creates a new index
-        if os.path.exists(llama_index_location):
-            storage_context = StorageContext.from_defaults(
-                persist_dir=llama_index_location
-            )
-            # load index
-            index = load_index_from_storage(storage_context)
-        else:
-            # Generate dataset if local file doesn't exist
-            # Load documents from a directory (you can change this path as needed)
-            index = VectorStoreIndex.from_documents(LLAMA_DATA)
-            index.storage_context.persist(persist_dir=llama_index_location)
-        global retriever
-        retriever = index.as_retriever(retrieval_mode="similarity", k=3)
-    else:
-        text_splitter = MarkdownTextSplitter(chunk_size=10000, chunk_overlap=2000)
-        splits = text_splitter.split_documents(LANGCHAIN_DATA)
-        embedding_model = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
-        )
-        retriever = FAISS.from_documents(documents=splits, embedding=embedding_model)
+    text_splitter = MarkdownTextSplitter(chunk_size=10000, chunk_overlap=2000)
+    splits = text_splitter.split_documents(LANGCHAIN_DATA)
+    embedding_model = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
+    global retriever
+    retriever = FAISS.from_documents(documents=splits, embedding=embedding_model)
 
 
 def retrieve_relevant_docs(query, retriever, k=10):
     context = ""
-    if USE_LLAMA_EMBEDDING:
-        relevant_docs = retriever.retrieve(query)
-        for i, doc in enumerate(relevant_docs):
-            context += doc.node.get_content()
-            print(doc.node.get_metadata())
-        return context
-    else:
-        # Vectorstore returns the most similar documents based on the query
-        relevant_docs = retriever.similarity_search(query, k=k)
-        # Concatenate the content of the retrieved documents
-        for doc in relevant_docs:
-            print(doc.metadata['source'])
-            context += "\n\n".join([doc.page_content])
-        return context
+    # Vectorstore returns the most similar documents based on the query
+    relevant_docs = retriever.similarity_search(query, k=k)
+    # Concatenate the content of the retrieved documents
+    for doc in relevant_docs:
+        print(doc.metadata['source'])
+        context += "\n\n".join([doc.page_content])
+        print(doc.page_content)
+    return context
 
 
 async def generate_response(message_history):
@@ -129,7 +104,6 @@ async def on_message(message):
         if len(message_history) > 2 and message_history[1].get("role") == "system":
             message_history.pop(1)
         message_history.insert(1, {"role": "system", "content": doc_context})
-
 
     # generate the response
     response_content = await generate_response(message_history)

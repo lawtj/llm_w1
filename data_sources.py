@@ -1,4 +1,3 @@
-from llama_index.core import SimpleDirectoryReader
 from langchain_community.document_loaders import TextLoader, JSONLoader, DirectoryLoader
 
 # If true, use smaller ttm_data set (5 custom papers). Otherwise use full scraped data
@@ -7,9 +6,6 @@ if GOLDEN_SOURCE:
     data_folder = "ttm_data"
 else:
     data_folder = "data_by_file"
-
-# For llama embedding: load context
-LLAMA_DATA = SimpleDirectoryReader(data_folder).load_data()
 
 # For langchain indexing: load context
 if GOLDEN_SOURCE:
