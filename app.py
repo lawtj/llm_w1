@@ -45,7 +45,7 @@ llama_index_location = "./data_index_llama/"
 @traceable
 @cl.on_chat_start
 async def start_main():
-    text_splitter = MarkdownTextSplitter(chunk_size=10000, chunk_overlap=2000)
+    text_splitter = MarkdownTextSplitter(chunk_size=20000, chunk_overlap=2000)
     splits = text_splitter.split_documents(LANGCHAIN_DATA)
     embedding_model = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
@@ -62,7 +62,6 @@ def retrieve_relevant_docs(query, retriever, k=10):
     for doc in relevant_docs:
         print(doc.metadata['source'])
         context += "\n\n".join([doc.page_content])
-        print(doc.page_content)
     return context
 
 
