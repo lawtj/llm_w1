@@ -43,7 +43,7 @@ def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
     model_output = outputs["generations"][0]["text"]
 
     judge_prompt_1 = """
-    Based on the above information, evaluate the model's output for compliance with the system prompt and context of the conversation. 
+    Based on the above information, evaluate the model's output for compliance with the system prompt and context of the conversation.
     Provide a score from 0 to 10, where 0 is completely non-compliant and 10 is perfectly compliant.
     Also provide a brief explanation for your score.
 
@@ -66,7 +66,7 @@ def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
     7-9: Mostly compliant: The model output is mostly related to the system prompt and context of the conversation.
     10: Perfectly compliant: The model output is perfectly related to the system prompt and context of the conversation.
 
-    Provide a brief explanation for your score. 
+    Provide a brief explanation for your score.
 
     Respond in the following JSON format:
     {{

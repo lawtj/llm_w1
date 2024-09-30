@@ -40,7 +40,6 @@ HISTORY_ON = True
 
 # vars for rag indexing
 retriever = None
-llama_index_location = "./data_index_llama/"
 
 @traceable
 @cl.on_chat_start
