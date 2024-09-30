@@ -2,7 +2,7 @@
 ```
 python3 -m venv .venv
 source .venv/bin/activate
-pip install python-dotenv langsmith chainlit openai llama_index langchain langchain_community jq sentence-transformers langchain_huggingface faiss-cpu black pylint
+pip install python-dotenv langsmith chainlit openai llama_index langchain langchain_community jq sentence-transformers langchain_huggingface faiss-cpu black pylint beautifulsoup4 serpapi google-search-results
 ```
 
 ## Setup

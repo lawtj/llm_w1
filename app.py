@@ -15,14 +15,14 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import MarkdownTextSplitter
 
-from prompts import SYSTEM_PROMPT, LLAMA_DATA, LANGCHAIN_DATA, SCRAPED_MARKDOWN
+from prompts import SYSTEM_PROMPT
+from data_sources import LLAMA_DATA, LANGCHAIN_DATA, SCRAPED_MARKDOWN
 from functions import get_citation_count
-api_key_openai = os.getenv("OPENAI_API_KEY")
 
 # initialize the client
 client = wrap_openai(
     openai.AsyncClient(
-        api_key=api_key_openai,
+        api_key=os.getenv("OPENAI_API_KEY"),
         base_url="https://api.openai.com/v1",
     )
 )
@@ -31,19 +31,20 @@ client = wrap_openai(
 open_ai_model = "gpt-4o-mini"
 model_kwargs = {"model": open_ai_model, "temperature": 0.3, "max_tokens": 1500}
 
+### RAG PARAMETERS ###
 # If false, it'll use langchain indexing
-USE_LLAMA_EMBEDDING = True
+USE_LLAMA_EMBEDDING = False
 
 # If true, it'll generate golden answers
-GENERATE_GOLDEN_ANSWERS = True
+GENERATE_GOLDEN_ANSWERS = False
 
-# If true, turn off context history
-TURN_OFF_HISTORY = False
+# If true, user history is saved
+HISTORY_ON = True
+### END RAG PARAMETERS ###
 
 # vars for rag indexing
 retriever = None
 llama_index_location = "./data_index_llama/"
-
 
 @traceable
 @cl.on_chat_start
@@ -73,19 +74,20 @@ async def start_main():
 
 
 def retrieve_relevant_docs(query, retriever, k=10):
+    context = ""
     if USE_LLAMA_EMBEDDING:
         relevant_docs = retriever.retrieve(query)
-        print(relevant_docs)
-        context = ""
         for i, doc in enumerate(relevant_docs):
             context += doc.node.get_content()
+            print(doc.node.get_metadata())
         return context
     else:
         # Vectorstore returns the most similar documents based on the query
         relevant_docs = retriever.similarity_search(query, k=k)
-        print(relevant_docs)
         # Concatenate the content of the retrieved documents
-        context = "\n\n".join([doc.page_content for doc in relevant_docs])
+        for doc in relevant_docs:
+            print(doc.metadata['source'])
+            context += "\n\n".join([doc.page_content])
         return context
 
 
@@ -147,5 +149,5 @@ async def on_message(message):
     message_history.append({"role": "assistant", "content": response_content})
 
     # save history to user session
-    if not TURN_OFF_HISTORY:
+    if not HISTORY_ON:
         cl.user_session.set("messages", message_history)

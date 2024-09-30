@@ -1,7 +1,3 @@
-from llama_index.core import SimpleDirectoryReader
-from langchain_community.document_loaders import JSONLoader
-from langchain.document_loaders import TextLoader
-
 SYSTEM_PROMPT = """
 You are an expert medical evidence evaluator with a background in synthesizing research from peer-reviewed medical articles. Your task is to critically evaluate summaries of medical studies, synthesize key findings, and provide accurate, evidence-based answers to user queries based on these summaries. You have access to a dataset of articles focused on temperature management, and you can use relevant information from these summaries to answer questions on the topic.
 
@@ -17,7 +13,7 @@ When engaging with the user, follow these guidelines:
 	6.	Ethical Boundaries: Do not offer medical advice, diagnosis, or treatment suggestions. Your role is to evaluate and synthesize evidence, not to replace professional medical guidance.
 	7.	Brevity and Clarity: Keep your responses concise. Summarize the key points of relevant studies and avoid unnecessary details. Ensure the user receives a clear, digestible understanding of the current evidence.
 	8.	Use of Functions: If the user asks for the citation count of a paper, you can use the get_citation_count function to retrieve it. Return function calls in JSON format, like this:
-    
+
 {
     "function": "get_citation_count",
     "parameters": {
@@ -44,7 +40,7 @@ The function call should be returned as pure JSON in the following format:
 
 ## Example
 - User: "What is the citation count for the paper 'The Effect of Temperature on the Rate of Photosynthesis' by Smith et al. (2020)?"
-- Assistant: 
+- Assistant:
 {
     "function": "get_citation_count",
     "parameters": {
@@ -53,28 +49,3 @@ The function call should be returned as pure JSON in the following format:
 }
 
 """
-
-# If true, use smaller ttm_data set (5 custom papers). Otherwise use full scraped data
-GOLDEN_SOURCE = False
-if GOLDEN_SOURCE:
-    data_folder = "ttm_data"
-else:
-    data_folder = "data"
-
-# For llama embedding: load context
-LLAMA_DATA = SimpleDirectoryReader(data_folder).load_data()
-
-# For langchain indexing: load context
-if GOLDEN_SOURCE:
-    loader = TextLoader(file_path=data_folder + "/scraped_markdown.md")
-else:
-    loader = JSONLoader(
-        file_path=data_folder + "/firecrawl_output.json",
-        jq_schema=".data[].markdown",
-        text_content=False,
-    )
-LANGCHAIN_DATA = loader.load()
-
-# Full TTM papers for feeding into system prompt for golden reference q&a:
-with open("ttm_data/scraped_markdown.md", "r") as f:
-    SCRAPED_MARKDOWN = f.read()
