@@ -4,13 +4,9 @@ from langchain_community.document_loaders import TextLoader, JSONLoader, Directo
 GOLDEN_SOURCE = False
 if GOLDEN_SOURCE:
     data_folder = "ttm_data"
-else:
-    data_folder = "data_by_file"
-
-# For langchain indexing: load context
-if GOLDEN_SOURCE:
     loader = TextLoader(file_path=data_folder + "/scraped_markdown.md")
 else:
+    data_folder = "data_by_file"
     loader = DirectoryLoader(data_folder, glob='**/*.json', show_progress=False, loader_cls=JSONLoader, loader_kwargs = {'jq_schema':'.full_content', 'text_content':False})
 
 LANGCHAIN_DATA = loader.load()
