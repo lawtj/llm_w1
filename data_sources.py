@@ -13,4 +13,12 @@ LANGCHAIN_DATA = loader.load()
 
 # Full TTM papers for feeding into system prompt for golden reference q&a:
 with open("ttm_data/scraped_markdown.md", "r") as f:
-    SCRAPED_MARKDOWN = f.read()
+    TTM = f.read()
+
+# Steroid summaries for feeding into system prompt for golden reference q&a:
+with open("data/steroid_summaries.md", "r") as f:
+    STEROID_SUMMARIES = f.read()
+
+# Dialysis summaries for feeding into system prompt for golden reference q&a:
+with open("data/dialysis_summaries.md", "r") as f:
+    DIALYSIS_SUMMARIES = f.read()

@@ -15,7 +15,7 @@ from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import MarkdownTextSplitter
 
 from prompts import SYSTEM_PROMPT
-from data_sources import LANGCHAIN_DATA, SCRAPED_MARKDOWN
+from data_sources import LANGCHAIN_DATA, TTM, STEROID_SUMMARIES, DIALYSIS_SUMMARIES
 from functions import get_citation_count
 
 # initialize the client
@@ -33,6 +33,10 @@ model_kwargs = {"model": open_ai_model, "temperature": 0.3, "max_tokens": 1500}
 ### RAG PARAMETERS ###
 # If true, it'll generate golden answers
 GENERATE_GOLDEN_ANSWERS = False
+
+# Select the reference dataset for golden answers
+# Options: "TTM", "STEROID_SUMMARIES", "DIALYSIS_SUMMARIES"
+GOLDEN_ANSWER_DATASET = "DIALYSIS_SUMMARIES"
 
 # If true, user history is saved
 HISTORY_ON = True
@@ -91,8 +95,15 @@ async def on_message(message):
     message_history.append({"role": "user", "content": message.content})
 
     if GENERATE_GOLDEN_ANSWERS:
-        # add reduced paper data fed directly into system prompt for comparison
-        doc_context = SCRAPED_MARKDOWN
+        # Select the appropriate dataset based on the GOLDEN_ANSWER_DATASET variable
+        if GOLDEN_ANSWER_DATASET == "TTM":
+            doc_context = TTM
+        elif GOLDEN_ANSWER_DATASET == "STEROID_SUMMARIES":
+            doc_context = STEROID_SUMMARIES
+        elif GOLDEN_ANSWER_DATASET == "DIALYSIS_SUMMARIES":
+            doc_context = DIALYSIS_SUMMARIES
+        else:
+            raise ValueError(f"Invalid GOLDEN_ANSWER_DATASET: {GOLDEN_ANSWER_DATASET}")
     else:
         # get relevant docs from rag/index
         doc_context = retrieve_relevant_docs(message.content, retriever)

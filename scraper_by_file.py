@@ -2,8 +2,10 @@ import requests
 import json
 from bs4 import BeautifulSoup
 import time
+import ollama
+from functions import clean_html
 
-DATA_DIR = "data_by_file"
+DATA_DIR = "data_by_file_md"
 
 # Function to get the HTML content of a webpage
 def get_page_content(url):
@@ -59,7 +61,7 @@ def get_next_page_url(soup):
     return None
 
 # Main scraping function
-def scrape_all_pages(base_url):
+def scrape_all_pages(base_url, scraper=None):
     next_page_url = base_url
 
     while next_page_url:
