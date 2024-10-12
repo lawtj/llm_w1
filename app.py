@@ -12,10 +12,9 @@ from langsmith import traceable
 
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain.text_splitter import MarkdownTextSplitter
 
 from prompts import SYSTEM_PROMPT
-from data_sources import LANGCHAIN_DATA, TTM, STEROID_SUMMARIES, DIALYSIS_SUMMARIES
+from data_sources import TTM, STEROID_SUMMARIES, DIALYSIS_SUMMARIES
 from functions import get_citation_count
 
 # initialize the client
@@ -48,14 +47,11 @@ retriever = None
 @traceable
 @cl.on_chat_start
 async def start_main():
-    text_splitter = MarkdownTextSplitter(chunk_size=20000, chunk_overlap=2000)
-    splits = text_splitter.split_documents(LANGCHAIN_DATA)
+    global retriever
     embedding_model = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
-    global retriever
-    retriever = FAISS.from_documents(documents=splits, embedding=embedding_model)
-
+    retriever = FAISS.load_local("faiss_index", embedding_model, allow_dangerous_deserialization=True)
 
 def retrieve_relevant_docs(query, retriever, k=10):
     context = ""
@@ -63,10 +59,11 @@ def retrieve_relevant_docs(query, retriever, k=10):
     relevant_docs = retriever.similarity_search(query, k=k)
     # Concatenate the content of the retrieved documents
     for doc in relevant_docs:
-        print(doc.metadata['source'])
-        context += "\n\n".join([doc.page_content])
+        metadata = doc.metadata
+        source = metadata.get("source", "Unknown source")
+        doc_id = metadata.get("doc_id", "Unknown ID")
+        context += f"\n\nSource: {source}\nDocument ID: {doc_id}\n{doc.page_content}"
     return context
-
 
 async def generate_response(message_history):
     response_message = cl.Message(content="")
