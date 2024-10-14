@@ -52,15 +52,34 @@ retriever = None
 @traceable
 @cl.on_chat_start
 async def start_main():
-    global retriever, embedding_model
-    embedding_model = HuggingFaceEmbeddings(
-        # model_name="sentence-transformers/all-MiniLM-L6-v2"             # Lightweight and fast
-        # model_name="sentence-transformers/all-MPNet-base-v2"            # Higher quality for semantic tasks
+    global retriever, embedding_model, model_base, model_qa, retriever_base, retriever_qa
+
+    # Load 2 diff embedding models for diff types of queries
+
+    # This handles exloratory queries, general semantic search, broad contextual knowledge
+    model_base = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MPNet-base-v2"            # Higher quality for semantic tasks
+    )
+    retriever_base = FAISS.load_local("faiss_index_base", model_base, allow_dangerous_deserialization=True)
+
+    # This is better for direct, well defined queries
+    model_qa = HuggingFaceEmbeddings(
         model_name="sentence-transformers/multi-qa-MiniLM-L6-cos-v1"    # Optimized for QA
     )
-    retriever = FAISS.load_local("faiss_index", embedding_model, allow_dangerous_deserialization=True)
+    retriever_qa = FAISS.load_local("faiss_index_qa", model_qa, allow_dangerous_deserialization=True)
 
 def retrieve_relevant_docs(query, retriever, score_threshold=0.35, min_docs=3, max_candidates=10):
+    # First, dynamically select an embedding model/ retriever
+    # Keywords for Base-based (not QA) retrieval
+    base_keywords = ["controversies", "indication", "evidence"]
+    # Check if query matches Base criteria
+    if any(keyword in query.lower() for keyword in base_keywords):
+        embedding_model = model_base
+        retriever = retriever_base
+    else:
+        embedding_model = model_qa
+        retriever = retriever_qa
+
     # Vectorstore returns the most similar documents based on the query
     query_embedding = embedding_model.embed_query(query)
     initial_docs = retriever.similarity_search(query, k=max_candidates) # Max k candidates
