@@ -27,7 +27,7 @@ client = wrap_openai(
 
 # use this part in the client.chat.completions.create() method
 open_ai_model = "gpt-4o-mini"
-model_kwargs = {"model": open_ai_model, "temperature": 0.3, "max_tokens": 1500}
+model_kwargs = {"model": open_ai_model, "temperature": 0, "max_tokens": 1500}
 
 ### RAG PARAMETERS ###
 # If true, it'll generate golden answers
