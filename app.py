@@ -15,12 +15,15 @@ from langsmith import traceable
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
+from sklearn.metrics.pairwise import cosine_similarity
+
 from prompts import SYSTEM_PROMPT, SHOULD_FETCH_NEW_DOCS_PROMPT
 from data_sources import TTM, STEROID_SUMMARIES, DIALYSIS_SUMMARIES
 from functions import get_citation_count
 
 # Define the model
-open_ai_model = "llama3.1"
+open_ai_model = "gpt-4o-mini"
+# open_ai_model = "llama3.1"
 model_kwargs = {"model": open_ai_model, "temperature": 0, "max_tokens": 1500}
 
 # Initialize the client based on the model
@@ -49,7 +52,7 @@ retriever = None
 @traceable
 @cl.on_chat_start
 async def start_main():
-    global retriever
+    global retriever, embedding_model
     embedding_model = HuggingFaceEmbeddings(
         # model_name="sentence-transformers/all-MiniLM-L6-v2"             # Lightweight and fast
         # model_name="sentence-transformers/all-MPNet-base-v2"            # Higher quality for semantic tasks
@@ -57,10 +60,28 @@ async def start_main():
     )
     retriever = FAISS.load_local("faiss_index", embedding_model, allow_dangerous_deserialization=True)
 
-def retrieve_relevant_docs(query, retriever, k=10):
+def retrieve_relevant_docs(query, retriever, score_threshold=0.3, min_docs=3, max_candidates=10):
     # Vectorstore returns the most similar documents based on the query
-    return retriever.similarity_search(query, k=k)
-    # return retriever.similarity_search("TTM", k=10) # Compare to basic keyword search
+    query_embedding = embedding_model.embed_query(query)
+    initial_docs = retriever.similarity_search(query, k=max_candidates) # Max k candidates
+
+    # Calculate cosine similarity scores
+    doc_embeddings = [embedding_model.embed_query(doc.page_content) for doc in initial_docs]
+    scores = cosine_similarity([query_embedding], doc_embeddings).flatten()
+
+    relevant_docs = [doc for doc, score in zip(initial_docs, scores) if score >= score_threshold] 
+    # Always return min docs
+    if len(relevant_docs) < min_docs: 
+        # If fewer than 3 relevant docs, return the first 3 documents (already sorted by similarity)
+        relevant_docs = initial_docs[:min_docs]
+
+    # Debugging: Print scores
+    print(f"Retrieved {len(relevant_docs)} relevant documents:")
+    for doc, score in zip(relevant_docs, scores):
+        print(f"Score: {score:.2f} | Content: {doc.page_content[:100]}...")
+
+    return relevant_docs
+    # return retriever.similarity_search("TTM", k=k) # Compare to basic keyword search
 
 def create_doc_context(relevant_docs):
     # Concatenate the content of the retrieved documents
