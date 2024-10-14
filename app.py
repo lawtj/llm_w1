@@ -60,7 +60,7 @@ async def start_main():
     )
     retriever = FAISS.load_local("faiss_index", embedding_model, allow_dangerous_deserialization=True)
 
-def retrieve_relevant_docs(query, retriever, score_threshold=0.3, min_docs=3, max_candidates=10):
+def retrieve_relevant_docs(query, retriever, score_threshold=0.35, min_docs=3, max_candidates=10):
     # Vectorstore returns the most similar documents based on the query
     query_embedding = embedding_model.embed_query(query)
     initial_docs = retriever.similarity_search(query, k=max_candidates) # Max k candidates
