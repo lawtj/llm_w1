@@ -175,7 +175,9 @@ def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
 # data = "TTM golden ref"
 # data = "TTM RAG with reduced data"
 # data = "TTM RAG with full data"
-data = "TTM llama"
+# data = "TTM-eval1"
+# data = "Steroids-eval1"
+data = "Dialysis-eval1"
 
 # A string to prefix the experiment name with.
 experiment_prefix = "Evidence summarizer for TTM articles"

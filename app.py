@@ -31,11 +31,11 @@ model_kwargs = {"model": open_ai_model, "temperature": 0.1, "max_tokens": 1500}
 
 ### RAG PARAMETERS ###
 # If true, it'll generate golden answers
-GENERATE_GOLDEN_ANSWERS = False
+GENERATE_GOLDEN_ANSWERS = True
 
 # Select the reference dataset for golden answers
 # Options: "TTM", "STEROID_SUMMARIES", "DIALYSIS_SUMMARIES"
-GOLDEN_ANSWER_DATASET = "DIALYSIS_SUMMARIES"
+GOLDEN_ANSWER_DATASET = "TTM"
 
 # If true, user history is saved
 HISTORY_ON = True
