@@ -1,6 +1,8 @@
 import os
 from dotenv import load_dotenv
 import json
+import litellm
+litellm.success_callback = "langsmith"
 
 load_dotenv()
 
@@ -17,17 +19,17 @@ from prompts import SYSTEM_PROMPT, SHOULD_FETCH_NEW_DOCS_PROMPT
 from data_sources import TTM, STEROID_SUMMARIES, DIALYSIS_SUMMARIES
 from functions import get_citation_count
 
-# initialize the client
+# Define the model
+open_ai_model = "llama3.1"
+model_kwargs = {"model": open_ai_model, "temperature": 0, "max_tokens": 1500}
+
+# Initialize the client based on the model
 client = wrap_openai(
     openai.AsyncClient(
-        api_key=os.getenv("OPENAI_API_KEY"),
-        base_url="https://api.openai.com/v1",
+        api_key=f"{'sk-1234' if open_ai_model not in ['gpt-4o-mini', 'gpt-4o'] else os.getenv('OPENAI_API_KEY')}",
+        base_url=f"{'http://localhost:4000' if open_ai_model not in ['gpt-4o-mini', 'gpt-4o'] else 'https://api.openai.com/v1'}"
     )
 )
-
-# use this part in the client.chat.completions.create() method
-open_ai_model = "gpt-4o-mini"
-model_kwargs = {"model": open_ai_model, "temperature": 0, "max_tokens": 1500}
 
 ### RAG PARAMETERS ###
 # If true, it'll generate golden answers
