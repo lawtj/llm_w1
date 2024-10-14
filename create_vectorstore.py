@@ -25,7 +25,9 @@ def create_and_save_vectorstore():
     # Create embedding model
     print("Creating embedding model...")
     embedding_model = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
+        # model_name="sentence-transformers/all-MiniLM-L6-v2"             # Lightweight and fast
+        # model_name="sentence-transformers/all-MPNet-base-v2"            # Higher quality for semantic tasks
+        model_name="sentence-transformers/multi-qa-MiniLM-L6-cos-v1"    # Optimized for QA
     )
     print("Embedding model created.")
 

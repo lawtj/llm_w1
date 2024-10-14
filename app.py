@@ -49,13 +49,16 @@ retriever = None
 async def start_main():
     global retriever
     embedding_model = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
+        # model_name="sentence-transformers/all-MiniLM-L6-v2"             # Lightweight and fast
+        # model_name="sentence-transformers/all-MPNet-base-v2"            # Higher quality for semantic tasks
+        model_name="sentence-transformers/multi-qa-MiniLM-L6-cos-v1"    # Optimized for QA
     )
     retriever = FAISS.load_local("faiss_index", embedding_model, allow_dangerous_deserialization=True)
 
 def retrieve_relevant_docs(query, retriever, k=10):
     # Vectorstore returns the most similar documents based on the query
     return retriever.similarity_search(query, k=k)
+    # return retriever.similarity_search("TTM", k=10) # Compare to basic keyword search
 
 def create_doc_context(relevant_docs):
     # Concatenate the content of the retrieved documents
