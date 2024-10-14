@@ -129,16 +129,16 @@ def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
 
     evaluation_prompt = f"""
     System Prompt: {system_prompt}
-
+    ====
     Message History:
     {json.dumps(message_history, indent=2)}
-
+    ====
     Latest User Message: {latest_message}
-
+    ====
     Model Output: {model_output}
-
+    ====
     Reference Output: {ref}
-
+    ====
     {judge_prompt_3}
 
 
@@ -177,7 +177,7 @@ def prompt_compliance_evaluator(run: Run, example: Example) -> dict:
 # data = "TTM RAG with full data"
 # data = "TTM-eval1"
 # data = "Steroids-eval1"
-data = "Dialysis-eval1"
+data = "TTM-eval2"
 
 # A string to prefix the experiment name with.
 experiment_prefix = "Evidence summarizer for TTM articles"

@@ -3,9 +3,14 @@ from dotenv import load_dotenv
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.text_splitter import MarkdownTextSplitter
-from data_sources import LANGCHAIN_DATA
+# from data_sources import LANGCHAIN_DATA
+from langchain_community.document_loaders import JSONLoader, DirectoryLoader
 
 load_dotenv()
+
+data_folder = "data_by_file"
+loader = DirectoryLoader(data_folder, glob='**/*.json', show_progress=False, loader_cls=JSONLoader, loader_kwargs = {'jq_schema':'{link: .link, content: .full_content}', 'text_content':False})
+LANGCHAIN_DATA = loader.load()
 
 def create_and_save_vectorstore():
     # Create text splitter
