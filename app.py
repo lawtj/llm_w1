@@ -13,7 +13,7 @@ from langsmith import traceable
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
-from prompts import SYSTEM_PROMPT
+from prompts import SYSTEM_PROMPT, SHOULD_FETCH_NEW_DOCS_PROMPT
 from data_sources import TTM, STEROID_SUMMARIES, DIALYSIS_SUMMARIES
 from functions import get_citation_count
 
@@ -27,7 +27,7 @@ client = wrap_openai(
 
 # use this part in the client.chat.completions.create() method
 open_ai_model = "gpt-4o-mini"
-model_kwargs = {"model": open_ai_model, "temperature": 0, "max_tokens": 1500}
+model_kwargs = {"model": open_ai_model, "temperature": 0.1, "max_tokens": 1500}
 
 ### RAG PARAMETERS ###
 # If true, it'll generate golden answers
@@ -54,16 +54,31 @@ async def start_main():
     retriever = FAISS.load_local("faiss_index", embedding_model, allow_dangerous_deserialization=True)
 
 def retrieve_relevant_docs(query, retriever, k=10):
-    context = ""
     # Vectorstore returns the most similar documents based on the query
-    relevant_docs = retriever.similarity_search(query, k=k)
+    return retriever.similarity_search(query, k=k)
+
+def create_doc_context(relevant_docs):
     # Concatenate the content of the retrieved documents
+    context = ""
+    print("DEBUG number of docs used: ", len(relevant_docs))
     for doc in relevant_docs:
+        print("DEBUG doc used: ", doc.metadata['source'])
         metadata = doc.metadata
         source = metadata.get("source", "Unknown source")
         doc_id = metadata.get("doc_id", "Unknown ID")
         context += f"\n\nSource: {source}\nDocument ID: {doc_id}\n{doc.page_content}"
     return context
+
+def get_golden_doc_context():
+    # Select the appropriate dataset based on the GOLDEN_ANSWER_DATASET variable
+    if GOLDEN_ANSWER_DATASET == "TTM":
+        return TTM
+    elif GOLDEN_ANSWER_DATASET == "STEROID_SUMMARIES":
+        return STEROID_SUMMARIES
+    elif GOLDEN_ANSWER_DATASET == "DIALYSIS_SUMMARIES":
+        return DIALYSIS_SUMMARIES
+    else:
+        raise ValueError(f"Invalid GOLDEN_ANSWER_DATASET: {GOLDEN_ANSWER_DATASET}")
 
 async def generate_response(message_history):
     response_message = cl.Message(content="")
@@ -79,6 +94,7 @@ async def generate_response(message_history):
     await response_message.update()
     return response_message.content
 
+documents = []
 
 @traceable
 @cl.on_message
@@ -91,25 +107,15 @@ async def on_message(message):
     # add user message to message history
     message_history.append({"role": "user", "content": message.content})
 
-    if GENERATE_GOLDEN_ANSWERS:
-        # Select the appropriate dataset based on the GOLDEN_ANSWER_DATASET variable
-        if GOLDEN_ANSWER_DATASET == "TTM":
-            doc_context = TTM
-        elif GOLDEN_ANSWER_DATASET == "STEROID_SUMMARIES":
-            doc_context = STEROID_SUMMARIES
-        elif GOLDEN_ANSWER_DATASET == "DIALYSIS_SUMMARIES":
-            doc_context = DIALYSIS_SUMMARIES
-        else:
-            raise ValueError(f"Invalid GOLDEN_ANSWER_DATASET: {GOLDEN_ANSWER_DATASET}")
-    else:
-        # get relevant docs from rag/index
-        doc_context = retrieve_relevant_docs(message.content, retriever)
+    global documents
+    # get relevant docs from rag/index
+    retrieved_docs = retrieve_relevant_docs(message.content, retriever)
+    documents = retrieved_docs
 
-    if len(doc_context) > 0:
-        # if previous content is present, remove it. This is because we only want to keep relevant documents in the prompt.
-        if len(message_history) > 2 and message_history[1].get("role") == "system":
-            message_history.pop(1)
-        message_history.insert(1, {"role": "system", "content": doc_context})
+    # if previous content is present, remove/replace it.
+    if len(message_history) > 2 and message_history[1].get("role") == "system":
+        message_history.pop(1)
+    message_history.insert(1, {"role": "system", "content": get_golden_doc_context() if GENERATE_GOLDEN_ANSWERS else create_doc_context(documents)})
 
     # generate the response
     response_content = await generate_response(message_history)
@@ -129,5 +135,18 @@ async def on_message(message):
     message_history.append({"role": "assistant", "content": response_content})
 
     # save history to user session
-    if not HISTORY_ON:
+    if HISTORY_ON:
         cl.user_session.set("messages", message_history)
+
+@traceable
+async def fetch_new_docs(message_history):
+    new_topic_message_history = [{"role": "system", "content": SHOULD_FETCH_NEW_DOCS_PROMPT}, {"role": "user", "content": message_history[-1]["content"]}]
+
+    response_content = await generate_response(new_topic_message_history)
+    print("DEBUG fetch_new_docs ", response_content)
+
+    if response_content.strip().startswith('{'):
+        response = json.loads(response_content.strip())
+        return response['fetch_new_docs']
+    else:
+        return True

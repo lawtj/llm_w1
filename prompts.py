@@ -14,3 +14,13 @@ When engaging with the user, follow these guidelines:
 	7.	Brevity and Clarity: Keep your responses concise. Summarize the key points of relevant studies and avoid unnecessary details. Ensure the user receives a clear, digestible understanding of the current evidence.
 
 """
+
+SHOULD_FETCH_NEW_DOCS_PROMPT = """\
+Based on the conversation, determine if the topic has any medical terms or is about a medical question.
+
+Output a boolean where it is a new topic in JSON format, and your rationale. Do not output as a code block.
+{
+    "fetch_new_docs": true
+    "rationale": "reasoning"
+}
+"""
