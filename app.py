@@ -135,8 +135,9 @@ async def on_message(message):
 
     global documents
     # get relevant docs from rag/index
-    retrieved_docs = retrieve_relevant_docs(message.content, retriever)
-    documents = retrieved_docs
+    if not GENERATE_GOLDEN_ANSWERS:
+        retrieved_docs = retrieve_relevant_docs(message.content, retriever)
+        documents = retrieved_docs
 
     # if previous content is present, remove/replace it.
     if len(message_history) > 2 and message_history[1].get("role") == "system":
